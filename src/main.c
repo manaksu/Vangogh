@@ -1,16 +1,18 @@
 #include <pebble.h>
 
 // Van Gogh Watchface
-// Art: 45x45 square cells filling 144x144px (cells alternate 3/4px)
-// Strip: 24px at bottom — time left, date right (2 lines)
-// Settings: mode 0=Color (default), 1=Basalt gray
+// Art: 45x45 square cells, 144x144px
+// Strip: 24px black bar at bottom
+//   LEFT  — bold HH:MM (5x7 at scale 2, 10x14px glyphs)
+//   RIGHT — date two lines, right-aligned
+// Art overlay: "VAN GOGH" rotated 90deg CCW on left edge,
+//   starts at y=94, reads upward, no background
 
-#define ROWS 45
-#define COLS 45
+#define ROWS    45
+#define COLS    45
 #define STRIP_Y 144
-#define STRIP_H 24
+#define STRIP_H  24
 
-// Single boundary table for both X and Y (square cells)
 static const uint8_t XY[46] = {0,3,6,10,13,16,19,22,26,29,32,35,38,42,45,48,51,54,58,61,64,67,70,74,77,80,83,86,90,93,96,99,102,106,109,112,115,118,122,125,128,131,134,138,141,144};
 
 static const uint8_t GRAY_D[ROWS*COLS] = {
@@ -206,7 +208,6 @@ static const GColor GRAY_PAL[4] = {
   GColorWhite, GColorLightGray, GColorDarkGray, GColorBlack
 };
 
-// 5x7 font: 0-9 (idx 0-9), colon (idx 10)
 static const uint8_t F57[11][7][5] = {
   {{0,1,1,1,0},{1,0,0,0,1},{1,0,0,1,1},{1,0,1,0,1},{1,1,0,0,1},{1,0,0,0,1},{0,1,1,1,0}},
   {{0,0,1,0,0},{0,1,1,0,0},{0,0,1,0,0},{0,0,1,0,0},{0,0,1,0,0},{0,0,1,0,0},{0,1,1,1,0}},
@@ -221,46 +222,21 @@ static const uint8_t F57[11][7][5] = {
   {{0,0,0,0,0},{0,0,1,0,0},{0,0,1,0,0},{0,0,0,0,0},{0,0,1,0,0},{0,0,1,0,0},{0,0,0,0,0}}
 };
 
-// 3x5 font: A-Z (0-25), 0-9 (26-35), space (36)
-// Each row packed as uint8: bit2=col0, bit1=col1, bit0=col2
 static const uint8_t F35[37][5] = {
-  {0x7,0x5,0x7,0x5,0x5}, // A
-  {0x6,0x5,0x6,0x5,0x6}, // B
-  {0x7,0x4,0x4,0x4,0x7}, // C
-  {0x6,0x5,0x5,0x5,0x6}, // D
-  {0x7,0x4,0x6,0x4,0x7}, // E
-  {0x7,0x4,0x6,0x4,0x4}, // F
-  {0x7,0x4,0x5,0x5,0x7}, // G
-  {0x5,0x5,0x7,0x5,0x5}, // H
-  {0x7,0x2,0x2,0x2,0x7}, // I
-  {0x3,0x1,0x1,0x5,0x2}, // J
-  {0x5,0x5,0x6,0x5,0x5}, // K
-  {0x4,0x4,0x4,0x4,0x7}, // L
-  {0x5,0x7,0x7,0x5,0x5}, // M
-  {0x5,0x7,0x5,0x5,0x5}, // N
-  {0x7,0x5,0x5,0x5,0x7}, // O
-  {0x7,0x5,0x7,0x4,0x4}, // P
-  {0x7,0x5,0x7,0x1,0x1}, // Q
-  {0x6,0x5,0x6,0x5,0x5}, // R
-  {0x7,0x4,0x7,0x1,0x7}, // S
-  {0x7,0x2,0x2,0x2,0x2}, // T
-  {0x5,0x5,0x5,0x5,0x7}, // U
-  {0x5,0x5,0x5,0x7,0x2}, // V
-  {0x5,0x5,0x7,0x7,0x5}, // W
-  {0x5,0x5,0x2,0x5,0x5}, // X
-  {0x5,0x5,0x2,0x2,0x2}, // Y
-  {0x7,0x1,0x2,0x4,0x7}, // Z
-  {0x2,0x5,0x5,0x5,0x2}, // 0
-  {0x2,0x6,0x2,0x2,0x7}, // 1
-  {0x6,0x1,0x2,0x4,0x7}, // 2
-  {0x6,0x1,0x2,0x1,0x6}, // 3
-  {0x5,0x5,0x7,0x1,0x1}, // 4
-  {0x7,0x4,0x6,0x1,0x6}, // 5
-  {0x3,0x4,0x6,0x5,0x2}, // 6
-  {0x7,0x1,0x2,0x2,0x2}, // 7
-  {0x2,0x5,0x2,0x5,0x2}, // 8
-  {0x2,0x5,0x3,0x1,0x6}, // 9
-  {0x0,0x0,0x0,0x0,0x0}, // space
+  {0x7,0x5,0x7,0x5,0x5},{0x6,0x5,0x6,0x5,0x6},{0x7,0x4,0x4,0x4,0x7},
+  {0x6,0x5,0x5,0x5,0x6},{0x7,0x4,0x6,0x4,0x7},{0x7,0x4,0x6,0x4,0x4},
+  {0x7,0x4,0x5,0x5,0x7},{0x5,0x5,0x7,0x5,0x5},{0x7,0x2,0x2,0x2,0x7},
+  {0x3,0x1,0x1,0x5,0x2},{0x5,0x5,0x6,0x5,0x5},{0x4,0x4,0x4,0x4,0x7},
+  {0x5,0x7,0x7,0x5,0x5},{0x5,0x7,0x5,0x5,0x5},{0x7,0x5,0x5,0x5,0x7},
+  {0x7,0x5,0x7,0x4,0x4},{0x7,0x5,0x7,0x1,0x1},{0x6,0x5,0x6,0x5,0x5},
+  {0x7,0x4,0x7,0x1,0x7},{0x7,0x2,0x2,0x2,0x2},{0x5,0x5,0x5,0x5,0x7},
+  {0x5,0x5,0x5,0x7,0x2},{0x5,0x5,0x7,0x7,0x5},{0x5,0x5,0x2,0x5,0x5},
+  {0x5,0x5,0x2,0x2,0x2},{0x7,0x1,0x2,0x4,0x7},
+  {0x2,0x5,0x5,0x5,0x2},{0x2,0x6,0x2,0x2,0x7},{0x6,0x1,0x2,0x4,0x7},
+  {0x6,0x1,0x2,0x1,0x6},{0x5,0x5,0x7,0x1,0x1},{0x7,0x4,0x6,0x1,0x6},
+  {0x3,0x4,0x6,0x5,0x2},{0x7,0x1,0x2,0x2,0x2},{0x2,0x5,0x2,0x5,0x2},
+  {0x2,0x5,0x3,0x1,0x6},
+  {0x0,0x0,0x0,0x0,0x0}
 };
 
 static const char *MONTHS[12] = {
@@ -272,12 +248,13 @@ static const char *DAYS[7] = {
   "THURSDAY","FRIDAY","SATURDAY"
 };
 
-#define PKEY_COLOR 1
-#define AKEY_MODE  0
+// Persistence keys — must match appinfo.json appKeys
+#define PKEY_COLOR 1   // storage key
+#define AKEY_MODE  0   // AppMessage key: 0=Color, 1=Gray
 
 static Window *s_window;
 static Layer  *s_canvas;
-static bool    s_color = true;
+static bool    s_color = true;  // default: color
 
 static uint8_t q2(uint8_t v) {
   if (v < 43)  return 0;
@@ -286,17 +263,17 @@ static uint8_t q2(uint8_t v) {
   return 3;
 }
 
-static void draw57(GContext *ctx, int d, int x, int y) {
-  for (int r = 0; r < 7; r++)
-    for (int c = 0; c < 5; c++)
-      if (F57[d][r][c])
-        graphics_fill_rect(ctx, GRect(x+c, y+r, 1, 1), 0, GCornerNone);
-}
-
 static int char35_idx(char c) {
   if (c >= 'A' && c <= 'Z') return c - 'A';
   if (c >= '0' && c <= '9') return 26 + (c - '0');
   return 36;
+}
+
+static void draw57_s2(GContext *ctx, int d, int x, int y) {
+  for (int r = 0; r < 7; r++)
+    for (int c = 0; c < 5; c++)
+      if (F57[d][r][c])
+        graphics_fill_rect(ctx, GRect(x + c*2, y + r*2, 2, 2), 0, GCornerNone);
 }
 
 static void draw35(GContext *ctx, char c, int x, int y) {
@@ -319,8 +296,26 @@ static int str_w(const char *s) {
   return n > 0 ? n * 4 - 1 : 0;
 }
 
+static void draw_label_rotated(GContext *ctx, const char *s, int x, int anchor_y) {
+  int len = (int)strlen(s);
+  int step = 3*2 + 2;
+  for (int i = 0; i < len; i++) {
+    int idx = char35_idx(s[i]);
+    int base_y = anchor_y - i * step;
+    for (int r = 0; r < 5; r++) {
+      uint8_t row = F35[idx][r];
+      for (int col = 0; col < 3; col++) {
+        if (row & (1 << (2 - col))) {
+          graphics_fill_rect(ctx,
+            GRect(x + r*2, base_y - col*2, 2, 2),
+            0, GCornerNone);
+        }
+      }
+    }
+  }
+}
+
 static void canvas_update(Layer *layer, GContext *ctx) {
-  // ── Art: 144x144, square cells ──
   for (int r = 0; r < ROWS; r++) {
     int y = XY[r], h = XY[r+1] - y;
     for (int c = 0; c < COLS; c++) {
@@ -337,7 +332,9 @@ static void canvas_update(Layer *layer, GContext *ctx) {
     }
   }
 
-  // ── Black strip ──
+  graphics_context_set_fill_color(ctx, GColorWhite);
+  draw_label_rotated(ctx, "VAN GOGH", 0, 64);
+
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, GRect(0, STRIP_Y, 144, STRIP_H), 0, GCornerNone);
 
@@ -345,29 +342,25 @@ static void canvas_update(Layer *layer, GContext *ctx) {
   struct tm *now = localtime(&t);
   graphics_context_set_fill_color(ctx, GColorWhite);
 
-  // LEFT: HH:MM in 5x7 font, vertically centered
-  int ty = STRIP_Y + (STRIP_H - 7) / 2;
+  int ty = STRIP_Y + (STRIP_H - 14) / 2;
   int digits[5] = { now->tm_hour/10, now->tm_hour%10, 10, now->tm_min/10, now->tm_min%10 };
   for (int i = 0; i < 5; i++)
-    draw57(ctx, digits[i], 6 + i * 6, ty);
+    draw57_s2(ctx, digits[i], 6 + i * 12, ty);
 
-  // RIGHT: two lines, right-aligned to x=141
-  // Line 1: "MAY 29 2026"
-  // Line 2: "MONDAY"
   char l1[16], l2[12];
   snprintf(l1, sizeof(l1), "%s %d %d",
     MONTHS[now->tm_mon], now->tm_mday, now->tm_year + 1900);
   snprintf(l2, sizeof(l2), "%s", DAYS[now->tm_wday]);
 
-  int x1 = 141 - str_w(l1);
-  int x2 = 141 - str_w(l2);
-  draw_str(ctx, l1, x1, STRIP_Y + 3);
-  draw_str(ctx, l2, x2, STRIP_Y + 12);
+  draw_str(ctx, l1, 141 - str_w(l1), STRIP_Y + 6);
+  draw_str(ctx, l2, 141 - str_w(l2), STRIP_Y + 13);
 }
 
+// AppMessage arrives here — update mode and redraw
 static void inbox_received(DictionaryIterator *iter, void *context) {
   Tuple *t = dict_find(iter, AKEY_MODE);
   if (t) {
+    // JS sends: 0=Color, 1=Gray
     s_color = (t->value->int32 == 0);
     persist_write_bool(PKEY_COLOR, s_color);
     layer_mark_dirty(s_canvas);
@@ -392,10 +385,14 @@ static void window_unload(Window *window) {
 }
 
 int main(void) {
+  // Load saved preference first
   if (persist_exists(PKEY_COLOR))
     s_color = persist_read_bool(PKEY_COLOR);
+
+  // Register inbox BEFORE opening app_message so no messages are missed
   app_message_register_inbox_received(inbox_received);
-  app_message_open(64, 64);
+  app_message_open(128, 64);  // larger inbox buffer
+
   s_window = window_create();
   window_set_window_handlers(s_window, (WindowHandlers) {
     .load   = window_load,
