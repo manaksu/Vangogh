@@ -254,7 +254,7 @@ static void window_load(Window *window) {
   text_layer_set_text_color(s_time_layer, s_time_color);
   text_layer_set_text_alignment(s_time_layer, GTextAlignmentCenter);
   text_layer_set_font(s_time_layer, fonts_get_system_font(FONT_KEY_LECO_26_BOLD_NUMBERS_AM_PM));
-  layer_add_child(root, s_time_layer);
+  layer_add_child(root, text_layer_get_layer(s_time_layer));
 
   time_t now = time(NULL);
   update_time(localtime(&now));
@@ -276,7 +276,7 @@ static void init(void) {
     .unload = window_unload,
   });
   window_stack_push(s_window, true);
-  tick_timer_service_subscribe(MINUTE_UNITS, tick_handler);
+  tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 }
 
 static void deinit(void) {
